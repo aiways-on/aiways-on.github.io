@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AIways On — 시스템 소개</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+<style>
+  /* ============ Design Tokens — Midnight Obsidian ============ */
+  :root {
+    --surface-base: #0B0F17;
+    --t1: #111827;   /* panels / rail */
+    --t2: #131E2E;   /* interactive modules */
+    --t3: #1F2937;   /* floating / cards */
+    --t4: #2D3748;   /* hover / active fills */
+    --cyan: #06B6D4;
+    --cyan-bright: #22D3EE;
+    --blue: #3B82F6;
+    --emerald: #10B981;
+    --amber: #F59E0B;
+    --rose: #EF4444;
+    --on: #dfe2ee;
+    --on-variant: #9aa7b4;
+    --on-dim: #6b7787;
+    --font-display: 'Manrope', system-ui, sans-serif;
+    --font-body: 'Inter', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+    --rail-w: 17rem;
+    --glow-cyan: 0 0 12px rgba(6,182,212,0.55), 0 0 28px rgba(6,182,212,0.28);
+    --glow-emerald: 0 0 10px rgba(16,185,129,0.35);
+    --glow-rose: 0 0 16px rgba(239,68,68,0.35);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: var(--font-body);
+    background: var(--surface-base);
+    color: var(--on);
+    font-size: 14px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection { background: rgba(6,182,212,0.3); }
+
+  /* ============ Layout ============ */
+  .app { display: flex; min-height: 100vh; }
+
+  /* Left telemetry rail */
+  .rail {
+    width: var(--rail-w);
+    flex-shrink: 0;
+    background: var(--t1);
+    height: 100vh;
+    position: sticky;
+    top: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 1.25rem 0.75rem;
+    z-index: 20;
+  }
+  .brand {
+    display: flex; align-items: center; gap: 0.7rem;
+    padding: 0.4rem 0.6rem 1.1rem;
+  }
+  .brand svg { width: 40px; height: 40px; flex-shrink: 0; }
+  .brand .name { font-family: var(--font-display); font-weight: 800; font-size: 19px; letter-spacing: -0.02em; }
+  .brand .sub { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.14em; color: var(--cyan); text-transform: uppercase; }
+
+  .rail-label {
+    font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--on-dim); padding: 0.8rem 0.9rem 0.4rem;
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 0.7rem;
+    padding: 0.6rem 0.9rem; border-radius: 6px; cursor: pointer;
+    color: var(--on-variant); font-weight: 500; font-size: 13.5px;
+    position: relative; transition: background 0.15s, color 0.15s;
+    user-select: none;
+  }
+  .nav-item .ico { width: 18px; height: 18px; flex-shrink: 0; opacity: 0.85; }
+  .nav-item:hover { background: var(--t3); color: var(--on); }
+  .nav-item.active { background: var(--t2); color: var(--cyan-bright); }
+  .nav-item.active::before {
+    content: ''; position: absolute; left: -0.75rem; top: 50%; transform: translateY(-50%);
+    width: 3px; height: 62%; border-radius: 3px; background: var(--cyan);
+    box-shadow: var(--glow-cyan);
+  }
+  .nav-num { margin-left: auto; font-family: var(--font-mono); font-size: 10px; color: var(--on-dim); }
+
+  .rail-footer {
+    margin-top: auto; padding: 0.9rem; background: var(--t2);
+    border-radius: 8px; display: flex; flex-direction: column; gap: 0.35rem;
+  }
+  .rail-footer .beacon { display: flex; align-items: center; gap: 0.5rem; font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; color: var(--emerald); text-transform: uppercase; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--emerald); box-shadow: var(--glow-emerald); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+  .rail-footer .tag { font-size: 11px; color: var(--on-dim); }
+
+  /* Main canvas */
+  .canvas { flex: 1; min-width: 0; padding: 2.2rem clamp(1.2rem, 3.5vw, 3rem) 4rem; max-width: 1180px; }
+  .view { display: none; animation: fade 0.35s ease; }
+  .view.active { display: block; }
+  @keyframes fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ============ Typography helpers ============ */
+  .eyebrow { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--cyan); margin-bottom: 0.6rem; }
+  h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(28px, 4vw, 40px); line-height: 1.12; letter-spacing: -0.03em; margin-bottom: 0.7rem; }
+  h2 { font-family: var(--font-display); font-weight: 700; font-size: 24px; letter-spacing: -0.02em; margin: 2.4rem 0 1rem; display: flex; align-items: center; gap: 0.6rem; }
+  h2 .bar { width: 4px; height: 22px; background: var(--cyan); border-radius: 3px; box-shadow: var(--glow-cyan); }
+  h3 { font-family: var(--font-display); font-weight: 700; font-size: 17px; letter-spacing: -0.01em; margin-bottom: 0.45rem; }
+  .lead { font-size: 16px; color: var(--on-variant); max-width: 760px; line-height: 1.7; }
+  p { color: var(--on-variant); }
+  .canvas p a, .accent { color: var(--cyan-bright); }
+  strong { color: var(--on); font-weight: 600; }
+
+  /* ============ Cards / grid ============ */
+  .grid { display: grid; gap: 1rem; }
+  .g2 { grid-template-columns: repeat(auto-fit, minmax(300px,1fr)); }
+  .g3 { grid-template-columns: repeat(auto-fit, minmax(240px,1fr)); }
+  .g4 { grid-template-columns: repeat(auto-fit, minmax(190px,1fr)); }
+  .card {
+    background: var(--t2); border-radius: 8px; padding: 1.25rem 1.35rem;
+    transition: transform 0.18s, box-shadow 0.18s;
+  }
+  .card.hi { background: var(--t3); }
+  .card.glow { box-shadow: 0 8px 32px -4px rgba(6,182,212,0.12); }
+  .card:hover { transform: translateY(-2px); }
+  .card .kicker { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--on-dim); margin-bottom: 0.5rem; }
+
+  /* metric card */
+  .metric { background: var(--t2); border-radius: 8px; padding: 1rem 1.15rem; }
+  .metric .num { font-family: var(--font-display); font-weight: 800; font-size: 30px; letter-spacing: -0.02em; line-height: 1; }
+  .metric .lbl { font-size: 12px; color: var(--on-variant); margin-top: 0.35rem; }
+  .metric.cyan .num { color: var(--cyan-bright); }
+  .metric.em .num { color: var(--emerald); }
+  .metric.blue .num { color: var(--blue); }
+
+  /* badges */
+  .badge {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; padding: 0.28rem 0.55rem; border-radius: 4px;
+    background: rgba(6,182,212,0.12); color: var(--cyan-bright);
+  }
+  .badge::before { content:''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .badge.em { background: rgba(16,185,129,0.12); color: var(--emerald); }
+  .badge.blue { background: rgba(59,130,246,0.14); color: #93b4fb; }
+  .badge.amber { background: rgba(245,158,11,0.14); color: var(--amber); }
+  .badge.rose { background: rgba(239,68,68,0.14); color: #ff9a90; }
+  .badge.gray { background: var(--t3); color: var(--on-dim); }
+  .badge.plain::before { display: none; }
+
+  .chip { font-family: var(--font-mono); font-size: 11px; padding: 0.15rem 0.5rem; border-radius: 4px; background: var(--t3); color: var(--blue); }
+
+  ul.clean { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.6rem; }
+  ul.clean li { position: relative; padding-left: 1.3rem; color: var(--on-variant); }
+  ul.clean li::before { content:''; position: absolute; left: 0; top: 0.62em; width: 6px; height: 6px; border-radius: 2px; background: var(--cyan); }
+
+  code { font-family: var(--font-mono); font-size: 12.5px; background: var(--t3); color: var(--cyan-bright); padding: 0.1rem 0.4rem; border-radius: 4px; }
+
+  /* ============ Lifecycle track (signature component) ============ */
+  .track { background: var(--t2); border-radius: 10px; padding: 1.8rem 1.5rem 1.5rem; margin: 1.2rem 0; overflow-x: auto; }
+  .track-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.6rem; }
+  .track-head .t { font-family: var(--font-display); font-weight: 700; font-size: 15px; display:flex; align-items:center; gap: 0.5rem; }
+  .stages { display: flex; align-items: flex-start; min-width: 780px; }
+  .stage { display: flex; flex-direction: column; align-items: center; text-align: center; width: 92px; flex-shrink: 0; }
+  .node { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--t4); color: var(--on-dim); font-family: var(--font-mono); font-size: 11px; }
+  .node.done { background: var(--emerald); color: #04150e; box-shadow: var(--glow-emerald); }
+  .node.run {
+    width: 34px; height: 34px; border-radius: 8px; background: var(--cyan); color: #04222a;
+    box-shadow: var(--glow-cyan); animation: pulse 1.8s infinite;
+  }
+  .stage .nm { margin-top: 0.6rem; font-size: 12px; font-weight: 600; color: var(--on); }
+  .stage .st { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--on-dim); margin-top: 0.15rem; }
+  .stage.run .st { color: var(--cyan-bright); }
+  .stage.done .st { color: var(--emerald); }
+  .connector { flex: 1; height: 2px; margin-top: 12px; min-width: 22px; background: var(--t4); border-radius: 2px; }
+  .connector.done { background: var(--emerald); box-shadow: var(--glow-emerald); }
+  .connector.run { background: linear-gradient(90deg, var(--emerald), var(--cyan)); }
+
+  /* ============ Step flow ============ */
+  .step { display: grid; grid-template-columns: 52px 1fr; gap: 1.1rem; margin-bottom: 0.4rem; }
+  .step-line { display: flex; flex-direction: column; align-items: center; }
+  .step-num {
+    width: 38px; height: 38px; border-radius: 9px; background: var(--t3); color: var(--cyan-bright);
+    display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-weight: 800; font-size: 16px;
+    flex-shrink: 0;
+  }
+  .step-num.hl { background: var(--cyan); color: #04222a; box-shadow: var(--glow-cyan); }
+  .step-connect { width: 2px; flex: 1; background: var(--t4); margin: 0.4rem 0; min-height: 20px; }
+  .step-body { padding-bottom: 1.5rem; }
+  .step-body .agent { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--blue); margin-bottom: 0.3rem; }
+
+  /* ============ Slack mock ============ */
+  .slack {
+    border-radius: 10px; overflow: hidden; background: #1a1d29; margin-top: 0.9rem;
+    box-shadow: 0 10px 40px -8px rgba(0,0,0,0.6); font-size: 13px;
+  }
+  .slack-top { background: #3f0e3f; color: #fff; padding: 0.6rem 1rem; display: flex; align-items: center; gap: 0.5rem; font-weight: 700; }
+  .slack-top .lock { opacity: 0.7; }
+  .slack-top .cnt { margin-left: auto; font-family: var(--font-mono); font-size: 11px; font-weight: 500; opacity: 0.8; }
+  .slack-body { background: #1a1d29; padding: 1rem 1.1rem; display: flex; flex-direction: column; gap: 0.9rem; }
+  .msg { display: grid; grid-template-columns: 34px 1fr; gap: 0.7rem; }
+  .ava { width: 34px; height: 34px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-weight: 800; font-size: 12px; color: #fff; }
+  .ava.bot { background: linear-gradient(135deg, #06B6D4, #3B82F6); }
+  .ava.user { background: #4a5568; }
+  .msg .who { font-weight: 700; color: #fff; font-size: 13px; }
+  .msg .who .rolebadge { font-family: var(--font-mono); font-size: 9px; background: #2a2d3a; color: #9aa7b4; padding: 0.05rem 0.35rem; border-radius: 3px; margin-left: 0.4rem; letter-spacing: 0.05em; vertical-align: middle; }
+  .msg .who .time { font-weight: 400; color: #7a8290; font-size: 11px; margin-left: 0.4rem; }
+  .msg .txt { color: #d7dbe4; margin-top: 0.15rem; }
+  .msg .txt .qt { font-weight: 700; color: #fff; display: block; margin: 0.5rem 0 0.3rem; }
+  .msg .txt .opt { color: #b5bcc8; }
+  .msg .txt .confirm { color: var(--emerald); font-weight: 600; }
+  .quote { border-left: 3px solid #4a5568; padding-left: 0.7rem; color: #c4cad4; }
+
+  /* code review / findings table */
+  .table { background: var(--t2); border-radius: 8px; overflow: hidden; }
+  .trow { display: grid; align-items: center; padding: 0.7rem 1rem; gap: 0.8rem; }
+  .trow.head { color: var(--on-dim); font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; }
+  .trow:nth-child(even):not(.head) { background: var(--t1); }
+  .trow:hover:not(.head) { background: var(--t3); }
+  .trow .mono { font-family: var(--font-mono); font-size: 12px; color: var(--blue); }
+
+  /* arch diagram */
+  .arch-flow { display: flex; flex-direction: column; gap: 0.6rem; }
+  .arch-row { display: flex; align-items: stretch; gap: 0.6rem; flex-wrap: wrap; }
+  .node-box { background: var(--t3); border-radius: 8px; padding: 0.85rem 1rem; flex: 1; min-width: 150px; }
+  .node-box .h { font-weight: 700; font-size: 13.5px; color: var(--on); display: flex; align-items: center; gap: 0.4rem; }
+  .node-box .d { font-size: 11.5px; color: var(--on-variant); margin-top: 0.25rem; }
+  .node-box .svc { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.08em; color: var(--cyan); }
+  .flow-arrow { text-align: center; color: var(--cyan); font-size: 18px; padding: 0.1rem 0; }
+
+  .callout { background: var(--t3); border-radius: 8px; padding: 1.1rem 1.3rem; margin: 1.1rem 0; box-shadow: inset 3px 0 0 var(--cyan); }
+  .callout.rose { box-shadow: inset 3px 0 0 var(--rose), var(--glow-rose); }
+  .callout .ct { font-weight: 700; color: var(--on); margin-bottom: 0.3rem; display: flex; align-items: center; gap: 0.45rem; }
+
+  .divider { height: 1px; background: var(--t3); margin: 2rem 0; border: none; }
+
+  .hero-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 1.3rem 0 0; }
+
+  .kv { display: flex; flex-direction: column; gap: 0.15rem; }
+  .kv .k { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--on-dim); }
+  .kv .v { color: var(--on); font-weight: 600; }
+
+  /* mobile menu toggle */
+  .menu-btn { display: none; }
+  @media (max-width: 900px) {
+    .rail { position: fixed; left: 0; top: 0; transform: translateX(-100%); transition: transform 0.25s; box-shadow: 0 0 60px rgba(0,0,0,0.7); }
+    .rail.open { transform: translateX(0); }
+    .canvas { padding-top: 4.5rem; }
+    .menu-btn {
+      display: flex; position: fixed; top: 0.9rem; left: 0.9rem; z-index: 30;
+      background: var(--t3); color: var(--cyan-bright); border: none; border-radius: 8px;
+      width: 42px; height: 42px; align-items: center; justify-content: center; cursor: pointer;
+    }
+    .scrim { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 15; }
+    .scrim.open { display: block; }
+  }
+</style>
+</head>
+<body>
+<button class="menu-btn" id="menuBtn" aria-label="menu">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+</button>
+<div class="scrim" id="scrim"></div>
+
+<div class="app">
+  <!-- ============ Left Telemetry Rail ============ -->
+  <aside class="rail" id="rail">
+    <div class="brand">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+        <rect width="48" height="48" rx="12" fill="#0E1726"/>
+        <path d="M14 16L24 10L34 16V32L24 38L14 32V16Z" stroke="#06B6D4" stroke-width="2.5" stroke-linejoin="round"/>
+        <path d="M24 10V24M24 24L34 30M24 24L14 30" stroke="#22D3EE" stroke-width="2" stroke-linecap="round"/>
+        <circle cx="24" cy="24" r="3.5" fill="#06B6D4"/>
+        <circle cx="24" cy="10" r="2" fill="#38BDF8"/>
+        <circle cx="34" cy="32" r="2" fill="#38BDF8"/>
+        <circle cx="14" cy="32" r="2" fill="#38BDF8"/>
+      </svg>
+      <div>
+        <div class="name">"AI"ways On</div>
+        <div class="sub">SDLC AUTOMATION</div>
+      </div>
+    </div>
+
+    <div class="rail-label">Navigation</div>
+    <nav id="nav"></nav>
+
+    <div class="rail-footer">
+      <div class="beacon"><span class="dot"></span> ALL SYSTEMS ON</div>
+      <div class="tag">채팅 → 인터뷰 → 설계 → 개발 → 검증 → PR</div>
+    </div>
+  </aside>
+
+  <!-- ============ Main Canvas ============ -->
+  <main class="canvas" id="canvas">
+
+    <!-- ==================== 1. OVERVIEW ==================== -->
+    <section class="view active" data-view="overview">
+      <div class="eyebrow">// TEAM "AI"ways On</div>
+      <h1>언제 어디서나, 채팅만으로<br/>인터뷰부터 개발·검증·운영까지</h1>
+      <p class="lead">
+        AIways On은 사용자가 메신저에서 원하는 기능을 이야기하면,
+        서로 다른 역할의 <strong>AI Agent들</strong>이 요구사항 정의부터 설계, 개발, 테스트,
+        코드 리뷰, 보안 검토, Git Push와 PR 생성까지 <strong>개발 프로세스 전 과정을 단계별로 수행</strong>하는
+        AI 기반 개발 자동화 플랫폼입니다.
+      </p>
+      <div class="hero-tags">
+        <span class="badge">CHAT-FIRST</span>
+        <span class="badge em">MULTI-AGENT SDLC</span>
+        <span class="badge blue">SLACK · GITHUB · K8S</span>
+        <span class="badge amber">INCIDENT + SELF-IMPROVE</span>
+      </div>
+
+      <h2><span class="bar"></span> 문제</h2>
+      <div class="grid g2">
+        <div class="card">
+          <div class="kicker">The Cost of a Small Request</div>
+          <p>업무 시스템에는 기능 추가·수정 요청이 끊임없이 발생합니다. 간단한 요청 하나도 실제 반영까지
+          <strong>요구사항 확인 → 인터뷰 → 기존 시스템 분석 → 상세 설계 → 개발 → 테스트 → 코드 리뷰 → 보안 검토 → Git → 배포 준비</strong>를 거쳐야 합니다.</p>
+        </div>
+        <div class="card">
+          <div class="kicker">Communication Overhead</div>
+          <p>최초 요청은 대부분 구체적이지 않아, 개발자는 실제 개발보다 <strong>요구사항을 확인하고 여러 담당자와 소통하는 데</strong> 더 많은 시간을 씁니다. 작은 기능 하나에도 며칠에서 일주일 이상이 걸리고, PC·개발 환경에 접근할 수 없으면 진행이 사실상 중단됩니다.</p>
+        </div>
+      </div>
+
+      <h2><span class="bar"></span> 해결 방법</h2>
+      <p class="lead" style="margin-bottom:1.1rem">AIways On은 개발 프로세스 자체를 <strong>AI Agent 중심으로 재구성</strong>합니다. 사용자는 개발 도구를 직접 다루지 않고, 채팅으로 요청하면 AI가 대화로 모호한 요구사항을 구체화하고, 이후 여러 전문 Agent가 각 단계를 이어서 수행합니다.</p>
+
+      <div class="callout">
+        <div class="ct"><span class="badge plain">CORE</span> 핵심 차별점</div>
+        <p>단순히 Claude나 ChatGPT 대화 화면을 모바일로 옮긴 것이 아닙니다. <strong>채팅 뒤에서 요구사항 정의·설계·코딩·테스트·리뷰·보안 검토·CI가 서로 다른 역할의 Agent로 실제로 수행되고, 하나의 대화에서 시작된 요청의 컨텍스트가 개발 전 과정으로 이어지는 것</strong>이 AIways On입니다.</p>
+      </div>
+
+      <div class="grid g4" style="margin-top:1.2rem">
+        <div class="metric cyan"><div class="num">6</div><div class="lbl">전문 역할 Agent 단계</div></div>
+        <div class="metric em"><div class="num">4</div><div class="lbl">마이크로서비스 (SVC 1~4)</div></div>
+        <div class="metric blue"><div class="num">3</div><div class="lbl">Slack 채널 / SR</div></div>
+        <div class="metric"><div class="num">100%</div><div class="lbl">모바일·PC 채팅 진입</div></div>
+      </div>
+
+      <h2><span class="bar"></span> 무엇을 담고 있나요?</h2>
+      <div class="grid g3">
+        <div class="card"><h3>① 전체 개발 흐름</h3><p>SR 등록부터 배포까지 9단계 라이프사이클과 실제 Slack 화면.</p></div>
+        <div class="card"><h3>② 아키텍처</h3><p>Portal · Pod Runner · Memory MCP · Slack Gateway · n8n · K8s.</p></div>
+        <div class="card"><h3>③ 장애 대응</h3><p>감지 → SR 승격 → 분석 → 가이드·패치 제안.</p></div>
+        <div class="card"><h3>④ 자체개선</h3><p>Repo 자동 스캔 → finding 검토 → 채택/반려.</p></div>
+        <div class="card"><h3>⑤ 시스템 컨텍스트</h3><p>개발 규정 · MCP 장기 메모리 · 소유 경계.</p></div>
+        <div class="card"><h3>⑥ 기술 스택 · AI 도구</h3><p>Claude Code · MCP/Skills · Stitch · AI-DLC.</p></div>
+      </div>
+      <p style="margin-top:1.4rem; color:var(--on-dim); font-size:13px">→ 왼쪽 메뉴에서 각 항목을 눌러 자세히 확인하세요.</p>
+    </section>
+
+    <!-- ==================== 2. PIPELINE / FLOW ==================== -->
+    <section class="view" data-view="flow">
+      <div class="eyebrow">// END-TO-END LIFECYCLE</div>
+      <h1>SR 등록부터 배포까지</h1>
+      <p class="lead">하나의 요청(SR)이 채팅에서 시작해 Push·PR·배포로 이어지는 전 과정입니다. 기능 개발 SR은 아래 순서로만 진행되며, 각 단계는 담당 Agent가 이어받습니다.</p>
+
+      <!-- Signature lifecycle track -->
+      <div class="track">
+        <div class="track-head">
+          <div class="t">🛰️ SDLC 라이프사이클 트랙</div>
+          <span class="badge">CURRENT: 개발 RUNNING</span>
+        </div>
+        <div class="stages">
+          <div class="stage done"><div class="node done">✓</div><div class="nm">① 등록</div><div class="st">Completed</div></div>
+          <div class="connector done"></div>
+          <div class="stage done"><div class="node done">✓</div><div class="nm">② 요구사항</div><div class="st">Completed</div></div>
+          <div class="connector done"></div>
+          <div class="stage done"><div class="node done">✓</div><div class="nm">③ 설계</div><div class="st">Completed</div></div>
+          <div class="connector run"></div>
+          <div class="stage run"><div class="node run">&lt;/&gt;</div><div class="nm">④ 개발</div><div class="st">Running</div></div>
+          <div class="connector"></div>
+          <div class="stage"><div class="node">✓</div><div class="nm">⑨ 완료</div><div class="st">Standby</div></div>
+        </div>
+      </div>
+      <p style="font-size:12.5px; color:var(--on-dim)">개발(④) 단계는 <code>dev</code> → <code>qa</code> → <code>code_review</code> → <code>security_review</code> 4개 서브스테이지로 나뉘어 실행됩니다. 장애·자체개선 SR은 요구사항·설계를 건너뛰고 <strong>등록 → 개발 → 완료</strong>로 진행합니다.</p>
+
+      <h2><span class="bar"></span> 단계별 상세</h2>
+
+      <!-- Step 1 -->
+      <div class="step">
+        <div class="step-line"><div class="step-num">1</div><div class="step-connect"></div></div>
+        <div class="step-body">
+          <div class="agent">STAGE 1 · 등록 / PROVISIONING</div>
+          <h3>SR 등록 (Portal)</h3>
+          <p>요청자가 GitHub 계정으로 로그인하고 <strong>SR 등록</strong> 화면에서 제목·개발 유형·요청 시스템·문제점/개발의뢰 등을 제출합니다. 제출자는 로그인 계정 기준으로 자동 지정됩니다. 등록 즉시 <strong>Slack 채널과 격리 Pod 프로비저닝</strong>이 시작되고 자동 파이프라인이 트리거됩니다.</p>
+          <ul class="clean">
+            <li>필수값이 비면 등록 버튼이 비활성화되고 빠진 필드를 경고로 표시</li>
+            <li>Slack 멤버(이메일)를 초대 목록에 추가 — 제출자는 자동 포함</li>
+            <li>n8n <code>sdlc-intake</code> 워크플로우가 repo clone → GitHub Issue 생성 → Stage 2 전이를 수행</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="step">
+        <div class="step-line"><div class="step-num hl">2</div><div class="step-connect"></div></div>
+        <div class="step-body">
+          <div class="agent">STAGE 2 · 요구사항 · CHANNEL: #requirements</div>
+          <h3>요구사항 인터뷰 (Slack)</h3>
+          <p>요구사항 인터뷰 Agent가 <code>#…-requirements</code> 채널에서 요청자와 대화하며 모호한 요구사항을 구체화합니다. 사용자는 <strong>PC·모바일 어디서나 채팅으로</strong> 답만 하면 됩니다.</p>
+
+          <div class="slack">
+            <div class="slack-top"><span class="lock">🔒</span> sr-20260909-1514-requirements <span class="cnt">👤 1</span></div>
+            <div class="slack-body">
+              <div class="msg">
+                <div class="ava bot">AO</div>
+                <div>
+                  <div class="who">Always On <span class="rolebadge">에이전트</span><span class="time">오후 3:14</span></div>
+                  <div class="txt">
+                    <div class="quote"><strong>요구사항 인터뷰 — SR-20260909-1514</strong><br/>안녕하세요, 요청 주신 "대시보드 알림 기능 추가" 건의 상세 요구사항을 확인하겠습니다.</div>
+                    <span class="qt">Q1. 알림을 사용자에게 전달할 채널은 어떤 걸로 하시겠어요?</span>
+                    <span class="opt">A) 대시보드 내 배지(뱃지) 표시만<br/>B) 배지 + 이메일 발송<br/>C) 배지 + 이메일 + Slack DM<br/>D) 기타 (직접 답변)</span>
+                  </div>
+                </div>
+              </div>
+              <div class="msg">
+                <div class="ava user">이</div>
+                <div><div class="who">이종용 <span class="time">오후 3:15</span></div><div class="txt">B</div></div>
+              </div>
+              <div class="msg">
+                <div class="ava bot">AO</div>
+                <div>
+                  <div class="who">Always On <span class="rolebadge">에이전트</span><span class="time">오후 3:15</span></div>
+                  <div class="txt"><span class="confirm">✅ 답변 확인 — 배지 + 이메일 발송으로 확정하겠습니다.</span>
+                  <span class="qt">Q2. 알림 발생 조건은 언제로 할까요?</span>
+                  <span class="opt">A) 신규 데이터 발생 즉시 &nbsp; B) 1시간 단위 집계 &nbsp; C) 일 1회 요약 &nbsp; D) 직접 설정</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p style="font-size:12.5px; color:var(--on-dim); margin-top:0.7rem">요구사항이 확정되면 <strong>승인 게이트</strong>가 해제되어야 설계 단계로 넘어갑니다. 이전 단계 채널 메시지는 다음 단계 진입 시 스냅샷으로 보존됩니다.</p>
+        </div>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="step">
+        <div class="step-line"><div class="step-num hl">3</div><div class="step-connect"></div></div>
+        <div class="step-body">
+          <div class="agent">STAGE 3 · 설계 · CHANNEL: #design</div>
+          <h3>기술 설계 (Slack)</h3>
+          <p>설계 Agent가 <code>#…-design</code> 채널에서 개발자와 함께 <strong>데이터 노출 범위, API, DB 스키마, 연계, 성능, 오류 처리</strong> 같은 기술 결정을 확정합니다. 필요 시 UI 목업을 생성해 채널에 공유합니다.</p>
+          <div class="slack">
+            <div class="slack-top"><span class="lock">🔒</span> sr-20260909-1514-design <span class="cnt">👤 2</span></div>
+            <div class="slack-body">
+              <div class="msg">
+                <div class="ava bot">AO</div>
+                <div>
+                  <div class="who">Always On <span class="rolebadge">에이전트</span><span class="time">오후 3:40</span></div>
+                  <div class="txt">
+                    <div class="quote"><strong>설계 검토 — 알림 기능</strong><br/>요구사항을 바탕으로 아래 설계안을 제안합니다.</div>
+                    <span class="qt">📐 제안 설계</span>
+                    <span class="opt">• 테이블: <code style="font-size:11px">notifications(id, user_id, type, read_at)</code><br/>• API: <code style="font-size:11px">GET /api/notifications</code> · <code style="font-size:11px">POST /read</code><br/>• 이메일: 기존 메일 큐 재사용 · 실패 시 재시도 3회<br/>• 성능: 사용자당 미읽음 카운트 캐싱</span>
+                    <span class="qt">이대로 진행할까요? 수정할 부분이 있으면 알려주세요.</span>
+                  </div>
+                </div>
+              </div>
+              <div class="msg">
+                <div class="ava user">박</div>
+                <div><div class="who">박준성 <span class="time">오후 3:43</span></div><div class="txt">이메일 재시도는 좋고, 미읽음 카운트는 Redis로 캐싱해주세요 👍</div></div>
+              </div>
+              <div class="msg">
+                <div class="ava bot">AO</div>
+                <div><div class="who">Always On <span class="rolebadge">에이전트</span><span class="time">오후 3:44</span></div><div class="txt"><span class="confirm">✅ 설계 확정 — Redis 캐싱 반영. 개발 단계로 전이합니다.</span></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 4 -->
+      <div class="step">
+        <div class="step-line"><div class="step-num hl">4</div><div class="step-connect"></div></div>
+        <div class="step-body">
+          <div class="agent">STAGE 4 · 개발 · EPHEMERAL POD</div>
+          <h3>코딩 (SDLC Pod Runner)</h3>
+          <p>SR마다 뜨는 <strong>격리된 Kubernetes Pod</strong> 안에서 <strong>Claude Code</strong>가 구동됩니다. 확정된 요구사항·설계 컨텍스트를 이어받아 실제 코드를 구현하는 <code>dev</code> 서브스테이지입니다.</p>
+          <div class="card hi" style="margin-top:0.8rem; font-family:var(--font-mono); font-size:12px;">
+            <div style="color:var(--on-dim)">&gt;_ pod-shell : sr-20260909-1514</div>
+            <div style="margin-top:0.5rem; color:var(--cyan-bright)">[dev] 코드 구현 시작 · 컨텍스트 로드 (요구사항/설계/개발규정)</div>
+            <div style="color:var(--emerald)">+ apps/portal/app/api/notifications/route.ts</div>
+            <div style="color:var(--emerald)">+ packages/lib/domain/notification.ts</div>
+            <div style="color:var(--on-variant)">~ drizzle/schema … notifications 테이블 추가</div>
+            <div style="color:var(--on-dim)">STATE: dev COMPLETED → qa IN PROGRESS</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 5 -->
+      <div class="step">
+        <div class="step-line"><div class="step-num hl">5</div><div class="step-connect"></div></div>
+        <div class="step-body">
+          <div class="agent">STAGE 4 · SUBSTAGES · qa → code_review → security_review</div>
+          <h3>테스트 · 코드 리뷰 · 보안 리뷰</h3>
+          <p>같은 Pod 안에서 개발 서브스테이지가 순서대로 이어집니다. 각 단계는 전용 Skill·MCP 도구를 사용해 자동 수행됩니다.</p>
+          <div class="grid g3" style="margin-top:0.9rem">
+            <div class="card"><span class="badge blue">QA</span><h3 style="margin-top:0.6rem">테스트 검증</h3><p style="font-size:13px">단위·통합 테스트 작성·실행, 커버리지 확인.</p></div>
+            <div class="card"><span class="badge amber">CODE_REVIEW</span><h3 style="margin-top:0.6rem">코드 리뷰</h3><p style="font-size:13px">품질·패턴·가독성 검토, 개선 지적 반영.</p></div>
+            <div class="card glow"><span class="badge rose">SECURITY_REVIEW</span><h3 style="margin-top:0.6rem">보안 감사</h3><p style="font-size:13px">시크릿·인젝션·인가 등 취약점 스캔.</p></div>
+          </div>
+          <div class="table" style="margin-top:1rem">
+            <div class="trow head" style="grid-template-columns:1.4fr 0.7fr 2fr 0.8fr"><div>SUBSTAGE</div><div>STATE</div><div>결과</div><div>SEVERITY</div></div>
+            <div class="trow" style="grid-template-columns:1.4fr 0.7fr 2fr 0.8fr"><div class="mono">qa</div><div><span class="badge em">DONE</span></div><div>단위/통합 통과 · 커버리지 84%</div><div><span class="badge gray">—</span></div></div>
+            <div class="trow" style="grid-template-columns:1.4fr 0.7fr 2fr 0.8fr"><div class="mono">code_review</div><div><span class="badge em">DONE</span></div><div>immutable 패턴 위반 1건 수정</div><div><span class="badge amber">MEDIUM</span></div></div>
+            <div class="trow" style="grid-template-columns:1.4fr 0.7fr 2fr 0.8fr"><div class="mono">security_review</div><div><span class="badge em">DONE</span></div><div>하드코딩 시크릿 없음 · 인가 확인</div><div><span class="badge em">PASS</span></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 6 -->
+      <div class="step">
+        <div class="step-line"><div class="step-num hl">6</div><div class="step-connect"></div></div>
+        <div class="step-body">
+          <div class="agent">STAGE 4 → 9 · GIT / GITHUB</div>
+          <h3>Commit · Push · PR 생성</h3>
+          <p>검증을 통과하면 Pod가 브랜치에 커밋·푸시하고 <strong>Pull Request를 자동 생성</strong>합니다. SR 상세의 <strong>GitHub 연결</strong> 패널에서 Issue·PR 링크를 추적할 수 있습니다.</p>
+          <div class="card hi" style="margin-top:0.7rem">
+            <div style="display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap">
+              <span class="badge blue plain">feat</span>
+              <span style="font-weight:600">대시보드 알림 기능 추가 (배지 + 이메일)</span>
+              <span class="chip">#PR-142</span>
+              <span class="chip" style="color:var(--emerald)">a1c9f0e</span>
+            </div>
+            <p style="font-size:12.5px; margin-top:0.5rem">CODEOWNERS 기반으로 소유 유닛 리뷰어가 자동 지정됩니다. 다른 유닛 디렉토리를 수정하면 해당 소유자 리뷰가 필요합니다.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 7 -->
+      <div class="step">
+        <div class="step-line"><div class="step-num">7</div><div class="step-connect"></div></div>
+        <div class="step-body">
+          <div class="agent">STAGE 9 · 완료</div>
+          <h3>PR Merge · 검토</h3>
+          <p>SR 상태가 <strong>완료</strong>가 되면 Push·PR 생성까지 끝났다는 뜻입니다. 사람이 GitHub에서 PR을 최종 검토하고 Merge합니다.</p>
+          <div class="callout">
+            <div class="ct"><span class="badge plain">중요</span> "완료"의 의미</div>
+            <p><strong>완료 = Git Push · PR 생성 완료.</strong> 배포는 AIways On의 자동화 범위에 포함되지 않으며, PR Merge 이후 아래 CI/CD·Helm/Skaffold 경로로 이어집니다.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 8 -->
+      <div class="step">
+        <div class="step-line"><div class="step-num">8</div></div>
+        <div class="step-body">
+          <div class="agent">POST-MERGE · CI/CD</div>
+          <h3>배포</h3>
+          <p>Merge된 코드는 <strong>Helm 차트(<code>charts/aiways-on</code>)</strong>로 전 서비스·CronJob·DB 마이그레이션 Job이 패키징되어 <strong>Kubernetes</strong>에 배포됩니다. 로컬 개발 루프는 <strong>Skaffold(<code>-p local</code>) + k3d + HMR</strong>로 실행합니다.</p>
+          <div class="grid g3" style="margin-top:0.8rem">
+            <div class="card"><div class="kicker">PACKAGING</div><strong>Helm</strong><p style="font-size:12.5px">서비스·CronJob·마이그레이션 Job</p></div>
+            <div class="card"><div class="kicker">RUNTIME</div><strong>Kubernetes</strong><p style="font-size:12.5px">Portal이 요청별 Pod 오케스트레이션</p></div>
+            <div class="card"><div class="kicker">LOCAL LOOP</div><strong>Skaffold + k3d</strong><p style="font-size:12.5px">HMR 로컬 개발</p></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 3. ARCHITECTURE ==================== -->
+    <section class="view" data-view="arch">
+      <div class="eyebrow">// SYSTEM ARCHITECTURE</div>
+      <h1>아키텍처</h1>
+      <p class="lead">Greenfield로 신규 구축한 모노레포(pnpm workspace). 4개 마이크로서비스가 n8n 오케스트레이션과 Kubernetes 위에서 협력합니다. 각 요청(SR)의 컨텍스트는 서비스 경계를 넘어 전 과정으로 이어집니다.</p>
+
+      <h2><span class="bar"></span> 서비스 (SVC 1~4)</h2>
+      <div class="grid g2">
+        <div class="card glow">
+          <div class="node-box" style="background:transparent; padding:0">
+            <div class="h">🖥️ Portal <span class="svc">SVC-1 · U1~U6 공동</span></div>
+          </div>
+          <p style="margin-top:0.5rem">Next.js 16 · React 19 · TypeScript · Tailwind CSS 4 · Radix UI. Auth.js(GitHub OAuth), Drizzle ORM, Zod. 웹/API와 <code>@kubernetes/client-node</code>로 요청별 Pod Runner를 직접 오케스트레이션.</p>
+        </div>
+        <div class="card">
+          <div class="h" style="font-weight:700; display:flex; gap:0.4rem; align-items:center">⚙️ Pod Runner <span class="svc" style="font-family:var(--font-mono); font-size:9px; color:var(--cyan)">SVC-2 · U3</span></div>
+          <p style="margin-top:0.5rem">Python 3.12 · FastAPI · Uvicorn. 요청(SR)마다 뜨는 <strong>ephemeral K8s Pod</strong> 안에서 Claude Code를 구동. 코딩·테스트·리뷰·Git 작업이 여기서 일어납니다.</p>
+        </div>
+        <div class="card">
+          <div class="h" style="font-weight:700; display:flex; gap:0.4rem; align-items:center">🧠 Memory MCP <span class="svc" style="font-family:var(--font-mono); font-size:9px; color:var(--cyan)">SVC-3 · U6</span></div>
+          <p style="margin-top:0.5rem">Node 22 · MCP SDK · Drizzle. Agent에 <strong>장기 컨텍스트/메모리</strong>를 제공하는 MCP 서버. 개발 규정·시스템 컨텍스트 조회의 출입구.</p>
+        </div>
+        <div class="card">
+          <div class="h" style="font-weight:700; display:flex; gap:0.4rem; align-items:center">🔌 Slack Gateway <span class="svc" style="font-family:var(--font-mono); font-size:9px; color:var(--cyan)">SVC-4 · U3</span></div>
+          <p style="margin-top:0.5rem">Node 22 · Slack Socket Mode. Portal과 <strong>코드·타입을 공유하지 않는</strong> stateless 릴레이. CI에서 격리 규칙을 검사합니다.</p>
+        </div>
+      </div>
+
+      <h2><span class="bar"></span> 요청 흐름 (데이터 경로)</h2>
+      <div class="card" style="background:var(--t1)">
+        <div class="arch-flow">
+          <div class="arch-row">
+            <div class="node-box"><div class="h">👤 사용자</div><div class="d">PC / 모바일 · 채팅</div></div>
+            <div class="node-box"><div class="h">🖥️ Portal <span class="svc">SVC-1</span></div><div class="d">SR 등록 · 상태 추적 · Pod 오케스트레이션</div></div>
+          </div>
+          <div class="flow-arrow">↓</div>
+          <div class="arch-row">
+            <div class="node-box"><div class="h">🔀 n8n</div><div class="d">intake · run-callback · logging 워크플로우. Openrouter로 AI Agent 연결</div></div>
+          </div>
+          <div class="flow-arrow">↓</div>
+          <div class="arch-row">
+            <div class="node-box"><div class="h">⚙️ SDLC Pod <span class="svc">SVC-2</span></div><div class="d">Claude Code 구동 · 코딩/테스트/리뷰/Git</div></div>
+            <div class="node-box"><div class="h">🧠 Memory MCP <span class="svc">SVC-3</span></div><div class="d">규정·컨텍스트·메모리 제공</div></div>
+          </div>
+          <div class="flow-arrow">↓ ↑ (콜백 run.completed / run.failed)</div>
+          <div class="arch-row">
+            <div class="node-box"><div class="h">🔌 Slack Gateway <span class="svc">SVC-4</span></div><div class="d">requirements / design / dev 채널 릴레이</div></div>
+            <div class="node-box"><div class="h">🐙 GitHub</div><div class="d">Issue · Commit · Push · PR</div></div>
+          </div>
+        </div>
+      </div>
+
+      <h2><span class="bar"></span> 데이터 · 인프라</h2>
+      <div class="grid g3">
+        <div class="card"><div class="kicker">주 데이터베이스</div><strong>PostgreSQL</strong><p style="font-size:12.5px">Drizzle ORM · 마이그레이션. 운영은 관리형 DB, 로컬은 in-cluster subchart.</p></div>
+        <div class="card"><div class="kicker">오브젝트 스토리지</div><strong>MinIO</strong><p style="font-size:12.5px">S3 호환. 목업 이미지 등 산출물 저장.</p></div>
+        <div class="card"><div class="kicker">워크플로우 엔진</div><strong>n8n</strong><p style="font-size:12.5px">단계 사이 오케스트레이션 (Helm subchart).</p></div>
+        <div class="card"><div class="kicker">런타임</div><strong>Kubernetes</strong><p style="font-size:12.5px">전체 스택 · 요청별 Pod.</p></div>
+        <div class="card"><div class="kicker">패키징</div><strong>Helm</strong><p style="font-size:12.5px"><code>charts/aiways-on</code> · CronJob · 마이그레이션 Job.</p></div>
+        <div class="card"><div class="kicker">로컬 개발</div><strong>Skaffold + Docker</strong><p style="font-size:12.5px">k3d + HMR · BuildKit 이미지 빌드.</p></div>
+      </div>
+
+      <h2><span class="bar"></span> 소유 경계 (모노레포)</h2>
+      <div class="card" style="font-family:var(--font-mono); font-size:12.5px; line-height:1.9; color:var(--on-variant)">
+        <div><span style="color:var(--cyan-bright)">apps/portal/</span>              SVC-1 Next.js 16 — U1~U6 공동</div>
+        <div><span style="color:var(--cyan-bright)">apps/sdlc-pod-runner/</span>     SVC-2 FastAPI (U3)</div>
+        <div><span style="color:var(--cyan-bright)">apps/sdlc-memory-mcp/</span>     SVC-3 MCP (U6)</div>
+        <div><span style="color:var(--cyan-bright)">apps/sdlc-slack-gateway/</span>  SVC-4 Socket Mode 릴레이 (U3)</div>
+        <div><span style="color:var(--blue)">packages/contracts/</span>       유닛 경계 계약 — 타입 전용</div>
+        <div><span style="color:var(--blue)">packages/lib/</span>             auth · db · ui · domain — U1 소유</div>
+        <div><span style="color:var(--on-dim)">charts/ · drizzle/ · aidlc-docs/</span></div>
+      </div>
+      <p style="font-size:12.5px; color:var(--on-dim); margin-top:0.6rem">소유 경계는 <code>CODEOWNERS</code>로 관리하고, 다른 유닛 디렉토리 수정 PR엔 해당 소유자 리뷰가 필요합니다.</p>
+    </section>
+
+    <!-- ==================== 4. INCIDENT ==================== -->
+    <section class="view" data-view="incident">
+      <div class="eyebrow">// INCIDENT RESPONSE</div>
+      <h1>장애 대응</h1>
+      <p class="lead">시스템은 장애를 감지하면 자동으로 SR로 승격해 분석하고, 가이드 또는 패치를 제안합니다. 장애·자체개선 SR은 요구사항·설계를 건너뛰고 <strong>등록 → 개발 → 완료</strong>로 진행됩니다.</p>
+
+      <div class="track">
+        <div class="track-head"><div class="t">🚨 장애 대응 라이프사이클</div><span class="badge rose">CRITICAL PATH</span></div>
+        <div class="stages" style="min-width:640px">
+          <div class="stage run"><div class="node run">!</div><div class="nm">감지</div><div class="st">Detected</div></div>
+          <div class="connector run"></div>
+          <div class="stage"><div class="node">↑</div><div class="nm">SR 승격</div><div class="st">Promoted</div></div>
+          <div class="connector"></div>
+          <div class="stage"><div class="node">🔍</div><div class="nm">분석</div><div class="st">Triaging</div></div>
+          <div class="connector"></div>
+          <div class="stage"><div class="node">💡</div><div class="nm">가이드·패치</div><div class="st">Proposed</div></div>
+          <div class="connector"></div>
+          <div class="stage"><div class="node">✓</div><div class="nm">종결</div><div class="st">Resolved</div></div>
+        </div>
+      </div>
+
+      <div class="grid g4" style="margin:1.2rem 0">
+        <div class="metric"><div class="num">4</div><div class="lbl">전체</div></div>
+        <div class="metric cyan"><div class="num">1</div><div class="lbl">DETECTED</div></div>
+        <div class="metric amber"><div class="num">1</div><div class="lbl">TRIAGING</div></div>
+        <div class="metric em"><div class="num">1</div><div class="lbl">RESOLVED</div></div>
+      </div>
+
+      <div class="table">
+        <div class="trow head" style="grid-template-columns:1.4fr 0.8fr 1fr 2fr 1.2fr"><div>장애 번호</div><div>등급</div><div>상태</div><div>제목</div><div>연결 SR</div></div>
+        <div class="trow" style="grid-template-columns:1.4fr 0.8fr 1fr 2fr 1.2fr"><div class="mono">INC-20260909-003</div><div><span class="badge blue">LOW</span></div><div><span class="badge">DETECTED</span></div><div>야간 배치 작업 실패</div><div style="color:var(--on-dim)">—</div></div>
+        <div class="trow" style="grid-template-columns:1.4fr 0.8fr 1fr 2fr 1.2fr"><div class="mono">INC-20260909-001</div><div><span class="badge amber">HIGH</span></div><div><span class="badge amber">TRIAGING</span></div><div>로그인 API 5xx 급증</div><div style="color:var(--on-dim)">—</div></div>
+        <div class="trow" style="grid-template-columns:1.4fr 0.8fr 1fr 2fr 1.2fr"><div class="mono">INC-20260909-002</div><div><span class="badge amber">MEDIUM</span></div><div><span class="badge em">GUIDE_READY</span></div><div>알림 발송 지연</div><div style="color:var(--on-dim)">—</div></div>
+        <div class="trow" style="grid-template-columns:1.4fr 0.8fr 1fr 2fr 1.2fr"><div class="mono">INC-20260908-001</div><div><span class="badge rose">CRITICAL</span></div><div><span class="badge em">RESOLVED</span></div><div>결제 승인 지연으로 결제 실패율 급증</div><div class="mono">SR-20260909-007</div></div>
+      </div>
+
+      <div class="callout rose" style="margin-top:1.3rem">
+        <div class="ct">🔴 상세에서 확인할 수 있는 것</div>
+        <p>장애 번호·등급·상태·출처, 감지/종결 시각, 연결 SR과 승격 시도 횟수, 증상과 마지막 오류, <strong>원인·영향·대응 등 분석 산출물</strong>, 현재 대응 단계. 종결되면 재발 방지 지식이 개발 규정의 <strong>장애 대응</strong> 분류로 축적됩니다.</p>
+      </div>
+    </section>
+
+    <!-- ==================== 5. SELF-IMPROVEMENT ==================== -->
+    <section class="view" data-view="improve">
+      <div class="eyebrow">// SYS.SCAN — SELF IMPROVEMENT</div>
+      <h1>자체개선</h1>
+      <p class="lead">등록된 Repo를 <strong>자동(CronJob) 또는 수동</strong>으로 스캔해 개선 후보인 finding을 검출하고, 검토를 거쳐 채택/반려합니다. 채택된 finding은 후속 SR이나 개발 규정으로 전환됩니다.</p>
+
+      <div class="grid g4" style="margin:1.2rem 0">
+        <div class="metric cyan"><div class="num">1</div><div class="lbl">진행 중 스캔</div></div>
+        <div class="metric"><div class="num">1</div><div class="lbl">미검토 finding</div></div>
+        <div class="metric em"><div class="num">0</div><div class="lbl">채택됨</div></div>
+        <div class="metric"><div class="num">1</div><div class="lbl">반려됨</div></div>
+      </div>
+
+      <div class="track">
+        <div class="track-head"><div class="t">🔬 스캔 파이프라인</div><span class="badge">AUTO · CRONJOB</span></div>
+        <div class="stages" style="min-width:560px">
+          <div class="stage done"><div class="node done">✓</div><div class="nm">트리거</div><div class="st">자동/수동</div></div>
+          <div class="connector done"></div>
+          <div class="stage run"><div class="node run">⟳</div><div class="nm">Repo 스캔</div><div class="st">Running</div></div>
+          <div class="connector run"></div>
+          <div class="stage"><div class="node">≡</div><div class="nm">Finding 검출</div><div class="st">Proposed</div></div>
+          <div class="connector"></div>
+          <div class="stage"><div class="node">⚖</div><div class="nm">검토</div><div class="st">채택/반려</div></div>
+        </div>
+      </div>
+
+      <h2><span class="bar"></span> Finding 범주</h2>
+      <div class="grid g4">
+        <div class="card"><span class="badge">코드 품질</span></div>
+        <div class="card"><span class="badge blue">구조</span></div>
+        <div class="card"><span class="badge rose">보안</span></div>
+        <div class="card"><span class="badge amber">의존성</span></div>
+        <div class="card"><span class="badge em">테스트</span></div>
+        <div class="card"><span class="badge">DX</span></div>
+        <div class="card"><span class="badge blue">성능</span></div>
+      </div>
+
+      <div class="grid g2" style="margin-top:1.2rem">
+        <div class="card glow"><h3>✅ 채택</h3><p>개선 후보를 승인해 <code>accepted</code>로 전환. 후속 SR·규정 전환은 별도 권한 담당자가 처리합니다.</p></div>
+        <div class="card"><h3>⛔ 반려</h3><p>사유를 입력해 반려. <strong>반려 사유는 필수</strong>이며, 같은 finding이 다시 검출될 때 판단 근거로 재사용됩니다.</p></div>
+      </div>
+    </section>
+
+    <!-- ==================== 6. SYSTEM CONTEXT ==================== -->
+    <section class="view" data-view="context">
+      <div class="eyebrow">// SYSTEM CONTEXT &amp; RULES</div>
+      <h1>시스템 컨텍스트</h1>
+      <p class="lead">AIways On의 Agent들은 백지 상태로 코딩하지 않습니다. <strong>조직의 개발 규정과 시스템 컨텍스트</strong>를 MCP 장기 메모리로 항상 참조하며, 하나의 요청 컨텍스트가 전 단계로 이어집니다.</p>
+
+      <div class="callout">
+        <div class="ct"><span class="badge plain">CONTEXT CHAIN</span> 컨텍스트가 이어진다</div>
+        <p>기존에는 사람이 각 단계 사이를 연결해야 했습니다. AIways On에서는 <strong>하나의 대화에서 시작된 요청의 컨텍스트(요구사항 → 설계 → 개발 규정 → 코드)가 서비스와 Agent 경계를 넘어 그대로 이어집니다.</strong> 개발 Pod는 확정된 요구사항·설계뿐 아니라 조직 개발 규정까지 로드한 상태로 코딩을 시작합니다.</p>
+      </div>
+
+      <h2><span class="bar"></span> 개발 규정 (조직 지식 베이스)</h2>
+      <p>Portal의 <strong>개발 규정</strong> 화면에서 조직의 개발 지식을 검색·등록·편집하고 개정 이력을 관리합니다. 분류별로 Agent가 참조합니다.</p>
+      <div class="grid g3" style="margin-top:0.9rem">
+        <div class="card"><span class="badge">시스템 프로파일</span><p style="font-size:12.5px; margin-top:0.5rem">시스템 구성, 데이터 모델, 주요 흐름</p></div>
+        <div class="card"><span class="badge em">행동 규정</span><p style="font-size:12.5px; margin-top:0.5rem">해야 하는 행동과 적용 예</p></div>
+        <div class="card"><span class="badge rose">금지 규정</span><p style="font-size:12.5px; margin-top:0.5rem">금지 사항, 발생 오류, 대안</p></div>
+        <div class="card"><span class="badge amber">실패사례</span><p style="font-size:12.5px; margin-top:0.5rem">잘못된 접근과 재발 방지 체크</p></div>
+        <div class="card"><span class="badge blue">장애 대응</span><p style="font-size:12.5px; margin-top:0.5rem">장애 원인, 대응 절차, 재발 방지</p></div>
+        <div class="card hi"><h3 style="font-size:14px">↻ 규정 등록·개정</h3><p style="font-size:12.5px">분류 선택 시 필수 Markdown 골격 자동 생성. 동시 편집 시 409 충돌 안내. 아카이브 규정도 물리 삭제되지 않음.</p></div>
+      </div>
+
+      <h2><span class="bar"></span> MCP 장기 메모리</h2>
+      <div class="grid g2">
+        <div class="card">
+          <div class="kicker">Memory MCP · SVC-3</div>
+          <p>Node 22 · MCP SDK · Drizzle 기반 MCP 서버가 Agent에게 <strong>장기 컨텍스트/메모리</strong>를 제공합니다. 개발 규정, 시스템 프로파일, 과거 장애·실패사례가 여기서 조회됩니다.</p>
+        </div>
+        <div class="card">
+          <div class="kicker">MCP / Skills / Plugin</div>
+          <p>개발 단계별 외부 컨텍스트와 전문 기능을 Workflow에 연결: 개발 규정·프로젝트 컨텍스트 조회, 코드 품질 검사, 코드 리뷰, 보안 검사, UI/UX 개발 지원, 문서·라이브러리 컨텍스트 조회.</p>
+        </div>
+      </div>
+
+      <div class="callout">
+        <div class="ct"><span class="badge plain">규약</span> 주요 개발 규칙 (요약)</div>
+        <ul class="clean">
+          <li><code>packages/contracts</code>에는 타입만 정의 — 런타임 코드 금지 (CI 검사)</li>
+          <li>실행 공통 로직은 <code>packages/lib/domain</code>에서 관리, 인증은 <code>packages/lib/auth</code>가 단독 소유</li>
+          <li>Drizzle 스키마는 유닛별 분리 · 공유 테이블·FK·마이그레이션 생성은 U1이 관리</li>
+          <li>Slack Gateway는 Portal과 코드·타입을 공유하지 않음 (CI 격리 검사)</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ==================== 7. STACK / AI TOOLS ==================== -->
+    <section class="view" data-view="stack">
+      <div class="eyebrow">// STACK &amp; AI TOOLING</div>
+      <h1>기술 스택 · AI 도구</h1>
+
+      <h2><span class="bar"></span> 애플리케이션 스택</h2>
+      <div class="table">
+        <div class="trow head" style="grid-template-columns:1.3fr 2fr 2fr"><div>서비스</div><div>스택</div><div>역할</div></div>
+        <div class="trow" style="grid-template-columns:1.3fr 2fr 2fr"><div><strong>Portal</strong><br/><span class="chip">SVC-1</span></div><div style="font-size:12.5px">Next.js 16 · React 19 · TS · Tailwind 4 · Radix UI</div><div style="font-size:12.5px">U1~U6 공동 웹/API · Auth.js · Drizzle · Zod</div></div>
+        <div class="trow" style="grid-template-columns:1.3fr 2fr 2fr"><div><strong>Pod Runner</strong><br/><span class="chip">SVC-2</span></div><div style="font-size:12.5px">Python 3.12 · FastAPI · Uvicorn</div><div style="font-size:12.5px">SR마다 뜨는 ephemeral Pod에서 Claude Code 구동</div></div>
+        <div class="trow" style="grid-template-columns:1.3fr 2fr 2fr"><div><strong>Memory MCP</strong><br/><span class="chip">SVC-3</span></div><div style="font-size:12.5px">Node 22 · MCP SDK · Drizzle</div><div style="font-size:12.5px">Agent에 장기 컨텍스트/메모리 제공</div></div>
+        <div class="trow" style="grid-template-columns:1.3fr 2fr 2fr"><div><strong>Slack Gateway</strong><br/><span class="chip">SVC-4</span></div><div style="font-size:12.5px">Node 22 · Slack Socket Mode</div><div style="font-size:12.5px">Portal과 코드 미공유 stateless 릴레이</div></div>
+      </div>
+
+      <h2><span class="bar"></span> 데이터 · 워크플로우 · 인프라</h2>
+      <div class="grid g4">
+        <div class="card"><strong>PostgreSQL</strong><p style="font-size:12px">주 DB · Drizzle</p></div>
+        <div class="card"><strong>MinIO</strong><p style="font-size:12px">S3 호환 스토리지</p></div>
+        <div class="card"><strong>n8n</strong><p style="font-size:12px">워크플로우 · Openrouter</p></div>
+        <div class="card"><strong>Kubernetes</strong><p style="font-size:12px">전체 런타임</p></div>
+        <div class="card"><strong>Helm</strong><p style="font-size:12px">패키징</p></div>
+        <div class="card"><strong>Skaffold</strong><p style="font-size:12px">로컬 루프 (k3d)</p></div>
+        <div class="card"><strong>Docker BuildKit</strong><p style="font-size:12px">이미지 빌드</p></div>
+        <div class="card"><strong>pnpm · Vitest</strong><p style="font-size:12px">모노레포 · 테스트</p></div>
+      </div>
+
+      <h2><span class="bar"></span> 사용한 AI 도구</h2>
+      <div class="grid g2">
+        <div class="card glow">
+          <div class="kicker">Primary Coding Agent</div>
+          <h3>Claude Code</h3>
+          <p>AIways On 개발의 주요 AI Coding Agent. 요구사항 분석·구체화, 시스템/상세 설계, 코드 생성·수정, 테스트 코드 작성, 오류 분석·디버깅, 코드 리뷰, 개발 문서 작성.</p>
+          <p style="font-size:12.5px; color:var(--on-dim); margin-top:0.5rem">프로젝트 규칙과 Agent Skill을 함께 구성해, 단순 코드 생성이 아니라 <strong>프로젝트의 개발 규칙과 컨텍스트를 유지</strong>하며 작업하도록 설정.</p>
+        </div>
+        <div class="card">
+          <div class="kicker">Context &amp; Capability</div>
+          <h3>MCP / Agent Skills / Plugin</h3>
+          <p>단계별 외부 컨텍스트와 전문 기능을 Workflow에 연결: 개발 규정·컨텍스트 조회, 코드 품질 검사, 코드 리뷰, 보안 검사, UI/UX 지원, 문서·라이브러리 컨텍스트.</p>
+        </div>
+        <div class="card">
+          <div class="kicker">Design</div>
+          <h3>Google Stitch</h3>
+          <p>Portal 주요 화면 설계와 UI/UX 시안 구체화에 활용. 생성 디자인을 기반으로 실제 Next.js 화면을 구현하고 반복 개선.</p>
+        </div>
+        <div class="card">
+          <div class="kicker">Methodology</div>
+          <h3>AI-DLC</h3>
+          <p>AIways On <em>개발 방법론</em>으로 적용. 요구사항 정의 → 설계 → 구현 → 검증을 AI와 함께 수행하고, 각 단계 실행 기록·산출물을 <code>aidlc-docs</code>에 관리.</p>
+          <p style="font-size:12px; color:var(--on-dim); margin-top:0.4rem">※ AIways On 자체가 AI-DLC라는 뜻은 아닙니다.</p>
+        </div>
+      </div>
+
+      <hr class="divider" />
+      <p style="text-align:center; color:var(--on-dim); font-size:12px; font-family:var(--font-mono); letter-spacing:0.08em">TEAM "AI"WAYS ON · LANGUAGE ANYWHERE, DEVELOPMENT ALWAYS ON</p>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  const NAV = [
+    { id: 'overview',  label: '개요',            num: '01', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
+    { id: 'flow',      label: '전체 흐름',       num: '02', icon: 'M4 6h16M4 12h16M4 18h10' },
+    { id: 'arch',      label: '아키텍처',        num: '03', icon: 'M4 5a1 1 0 011-1h5v6H4V5zm10-1h5a1 1 0 011 1v3h-6V4zm0 7h6v3a1 1 0 01-1 1h-5v-4zM4 13h6v6H5a1 1 0 01-1-1v-5z' },
+    { id: 'incident',  label: '장애 대응',       num: '04', icon: 'M12 9v4m0 4h.01M10.29 3.86L1.82 18a1 1 0 00.86 1.5h18.64a1 1 0 00.86-1.5L13.71 3.86a1 1 0 00-1.72 0z' },
+    { id: 'improve',   label: '자체개선',        num: '05', icon: 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15' },
+    { id: 'context',   label: '시스템 컨텍스트', num: '06', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
+    { id: 'stack',     label: '기술 스택',       num: '07', icon: 'M5 12l-2 0m2 0a7 7 0 1014 0m-14 0a7 7 0 0114 0m0 0l2 0M12 3v2m0 14v2' },
+  ];
+
+  const nav = document.getElementById('nav');
+  NAV.forEach((item, i) => {
+    const el = document.createElement('div');
+    el.className = 'nav-item' + (i === 0 ? ' active' : '');
+    el.dataset.target = item.id;
+    el.innerHTML = `<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="${item.icon}"/></svg><span>${item.label}</span><span class="nav-num">${item.num}</span>`;
+    el.addEventListener('click', () => go(item.id));
+    nav.appendChild(el);
+  });
+
+  function go(id) {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.target === id));
+    document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.dataset.view === id));
+    document.getElementById('canvas').scrollTo({ top: 0 });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    closeRail();
+    history.replaceState(null, '', '#' + id);
+  }
+
+  // mobile rail
+  const rail = document.getElementById('rail'), scrim = document.getElementById('scrim');
+  function closeRail() { rail.classList.remove('open'); scrim.classList.remove('open'); }
+  document.getElementById('menuBtn').addEventListener('click', () => { rail.classList.toggle('open'); scrim.classList.toggle('open'); });
+  scrim.addEventListener('click', closeRail);
+
+  // deep link
+  const hash = location.hash.replace('#', '');
+  if (NAV.some(n => n.id === hash)) go(hash);
+</script>
+</body>
+</html>
